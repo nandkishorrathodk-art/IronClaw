@@ -44,7 +44,8 @@ class Settings(BaseSettings):
     redis_cache_ttl: int = 3600
 
     # Qdrant Vector DB
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
     qdrant_api_key: Optional[str] = None
     qdrant_collection_conversations: str = "ironclaw_conversations"
     qdrant_collection_knowledge: str = "ironclaw_knowledge"
