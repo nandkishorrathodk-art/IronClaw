@@ -177,3 +177,120 @@ class CostLimit(Base):
     
     def __repr__(self) -> str:
         return f"<CostLimit user_id={self.user_id}: ${self.daily_limit_usd}/day, ${self.monthly_limit_usd}/month>"
+
+
+class RoutingDecision(Base):
+    """Track AI routing decisions for reinforcement learning."""
+    
+    __tablename__ = "routing_decisions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    # Request details
+    task_type = Column(String(50), nullable=False, index=True)
+    prompt_preview = Column(String(500))  # First 500 chars of prompt
+    
+    # Routing decision
+    selected_provider = Column(String(50), nullable=False, index=True)
+    selected_model = Column(String(100), nullable=False)
+    alternative_providers = Column(JSON)  # List of other providers considered
+    
+    # Outcome metrics
+    response_time_ms = Column(Integer)
+    total_tokens = Column(Integer, default=0)
+    cost_usd = Column(Float, default=0.0)
+    success = Column(Boolean, default=True)
+    error_message = Column(Text)
+    
+    # User feedback (explicit)
+    user_rating = Column(Integer)  # 1-5 stars, or thumbs up/down (-1, 0, 1)
+    user_feedback = Column(Text)
+    
+    # Quality metrics (implicit feedback)
+    quality_score = Column(Float)  # 0-1, computed from various signals
+    hallucination_detected = Column(Boolean, default=False)
+    context_relevance = Column(Float)  # How relevant to conversation context
+    
+    # Reinforcement learning
+    reward_value = Column(Float)  # Computed reward for RL
+    exploration_decision = Column(Boolean, default=False)  # Was this an exploration vs exploitation?
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    def __repr__(self) -> str:
+        return f"<RoutingDecision {self.task_type} → {self.selected_provider}/{self.selected_model}>"
+
+
+class ProviderPerformance(Base):
+    """Aggregate performance metrics for each provider by task type."""
+    
+    __tablename__ = "provider_performance"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Provider identification
+    provider = Column(String(50), nullable=False, index=True)
+    model = Column(String(100), nullable=False)
+    task_type = Column(String(50), nullable=False, index=True)
+    
+    # Aggregated metrics
+    total_requests = Column(Integer, default=0)
+    successful_requests = Column(Integer, default=0)
+    failed_requests = Column(Integer, default=0)
+    
+    # Performance
+    avg_response_time_ms = Column(Float)
+    p50_response_time_ms = Column(Float)
+    p95_response_time_ms = Column(Float)
+    p99_response_time_ms = Column(Float)
+    
+    # Quality
+    avg_user_rating = Column(Float)  # Average of user ratings (1-5)
+    avg_quality_score = Column(Float)  # Average implicit quality score
+    hallucination_rate = Column(Float)  # Percentage of responses with detected hallucinations
+    
+    # Cost
+    total_cost_usd = Column(Float, default=0.0)
+    avg_cost_per_request_usd = Column(Float)
+    
+    # Reinforcement learning
+    avg_reward = Column(Float)  # Average reward value
+    selection_probability = Column(Float, default=0.5)  # Current probability of selecting this provider for this task
+    exploration_rate = Column(Float, default=0.1)  # How often to explore this provider
+    
+    # Timestamps
+    last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    def __repr__(self) -> str:
+        return f"<ProviderPerformance {self.provider}/{self.model} for {self.task_type}: success={self.successful_requests}/{self.total_requests}>"
+
+
+class ConversationMemory(Base):
+    """Vector embeddings for semantic search of conversations."""
+    
+    __tablename__ = "conversation_memories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    
+    # Content and metadata
+    content = Column(Text, nullable=False)
+    content_type = Column(String(50), default="message")  # message, summary, key_point
+    
+    # Vector embedding (stored in Qdrant, this is just reference)
+    qdrant_point_id = Column(String(100), unique=True, index=True)
+    embedding_model = Column(String(100), default="text-embedding-3-small")
+    
+    # Search optimization
+    content_hash = Column(String(64), index=True)  # SHA-256 of content for deduplication
+    tokens = Column(Integer)  # Token count for context management
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    def __repr__(self) -> str:
+        return f"<ConversationMemory {self.id}: {self.content[:50]}...>"

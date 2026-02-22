@@ -201,6 +201,7 @@
 ---
 
 ### [ ] Phase 3: Advanced AI Brain with NPU Acceleration
+<!-- chat-id: aeb778c8-a20b-48a4-a640-d1730e14f0cf -->
 **Duration**: Week 3-4  
 **Goal**: Multi-model orchestration, semantic memory, reasoning
 
