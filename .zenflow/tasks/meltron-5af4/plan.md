@@ -571,6 +571,7 @@
 ---
 
 ### [ ] Phase 7: Voice & Emotion Intelligence
+<!-- chat-id: f71af7f4-0bcb-4eb1-8afe-bc061a23d158 -->
 **Duration**: Week 7-8  
 **Goal**: Fast STT/TTS, wake word, emotion detection
 
