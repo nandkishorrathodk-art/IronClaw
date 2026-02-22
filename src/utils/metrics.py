@@ -143,3 +143,74 @@ async def update_system_metrics():
 def get_current_memory_usage_mb() -> float:
     """Get current memory usage in MB."""
     return psutil.Process().memory_info().rss / 1024 / 1024
+
+
+# Plugin Metrics
+plugin_executions_total = Counter(
+    "ironclaw_plugin_executions_total",
+    "Total plugin executions",
+    ["plugin_name", "status"]
+)
+
+plugin_execution_duration_seconds = Histogram(
+    "ironclaw_plugin_execution_duration_seconds",
+    "Plugin execution latency",
+    ["plugin_name"]
+)
+
+# Workflow Metrics
+workflow_executions_total = Counter(
+    "ironclaw_workflow_executions_total",
+    "Total workflow executions",
+    ["workflow_name", "status"]
+)
+
+workflow_execution_duration_seconds = Histogram(
+    "ironclaw_workflow_execution_duration_seconds",
+    "Workflow execution latency",
+    ["workflow_name"]
+)
+
+workflow_steps_total = Counter(
+    "ironclaw_workflow_steps_total",
+    "Total workflow steps executed",
+    ["workflow_name", "step_name", "status"]
+)
+
+# Voice Metrics
+voice_transcriptions_total = Counter(
+    "ironclaw_voice_transcriptions_total",
+    "Total voice transcriptions",
+    ["engine", "language"]
+)
+
+voice_transcription_duration_seconds = Histogram(
+    "ironclaw_voice_transcription_duration_seconds",
+    "Voice transcription latency",
+    ["engine"]
+)
+
+voice_syntheses_total = Counter(
+    "ironclaw_voice_syntheses_total",
+    "Total voice syntheses",
+    ["engine", "language", "voice"]
+)
+
+# Security Metrics
+security_scans_total = Counter(
+    "ironclaw_security_scans_total",
+    "Total security scans",
+    ["scan_type", "status"]
+)
+
+security_vulnerabilities_found = Counter(
+    "ironclaw_security_vulnerabilities_found",
+    "Total vulnerabilities found",
+    ["severity", "vulnerability_type"]
+)
+
+security_scan_duration_seconds = Histogram(
+    "ironclaw_security_scan_duration_seconds",
+    "Security scan latency",
+    ["scan_type"]
+)

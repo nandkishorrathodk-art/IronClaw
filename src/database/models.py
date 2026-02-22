@@ -435,3 +435,140 @@ class LearningEvent(Base):
     
     def __repr__(self) -> str:
         return f"<LearningEvent {self.event_type}: {self.description[:50]}>"
+
+
+class WebSocketSession(Base):
+    """Track WebSocket connections and user presence."""
+    
+    __tablename__ = "websocket_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Session details
+    session_id = Column(String(100), unique=True, nullable=False, index=True)
+    connection_id = Column(String(100), unique=True, nullable=False)
+    
+    # Client information
+    client_ip = Column(String(50))
+    user_agent = Column(String(500))
+    
+    # Connection state
+    is_connected = Column(Boolean, default=True, nullable=False, index=True)
+    last_ping_at = Column(DateTime(timezone=True))
+    last_pong_at = Column(DateTime(timezone=True))
+    
+    # Subscription channels
+    subscribed_channels = Column(JSON)  # List of event types subscribed to
+    
+    # Statistics
+    messages_sent = Column(Integer, default=0)
+    messages_received = Column(Integer, default=0)
+    bytes_sent = Column(Integer, default=0)
+    bytes_received = Column(Integer, default=0)
+    
+    # Timestamps
+    connected_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    disconnected_at = Column(DateTime(timezone=True))
+    
+    def __repr__(self) -> str:
+        return f"<WebSocketSession {self.session_id}: user_id={self.user_id}, connected={self.is_connected}>"
+
+
+class SharedResource(Base):
+    """Shared conversations, workflows, or other resources for team collaboration."""
+    
+    __tablename__ = "shared_resources"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Resource identification
+    resource_type = Column(String(50), nullable=False, index=True)  # conversation, workflow, plugin
+    resource_id = Column(Integer, nullable=False, index=True)
+    
+    # Ownership
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Sharing settings
+    share_mode = Column(String(20), nullable=False)  # view_only, edit, admin
+    is_public = Column(Boolean, default=False)
+    
+    # Access control
+    allowed_user_ids = Column(JSON)  # List of user IDs with access
+    team_id = Column(Integer)  # Optional: if part of a team
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    def __repr__(self) -> str:
+        return f"<SharedResource {self.resource_type}:{self.resource_id} by user {self.owner_user_id}>"
+
+
+class CollaborationEvent(Base):
+    """Track collaborative editing events for multi-user sessions."""
+    
+    __tablename__ = "collaboration_events"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Event details
+    session_id = Column(String(100), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Event type
+    event_type = Column(String(50), nullable=False, index=True)  # join, leave, edit, comment, cursor_move
+    
+    # Resource being collaborated on
+    resource_type = Column(String(50), nullable=False)
+    resource_id = Column(Integer, nullable=False, index=True)
+    
+    # Event payload
+    payload = Column(JSON)  # Actual event data (edits, cursor position, etc.)
+    
+    # Conflict resolution
+    version = Column(Integer, default=1)  # For optimistic locking
+    conflicts_detected = Column(Boolean, default=False)
+    resolved = Column(Boolean, default=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    def __repr__(self) -> str:
+        return f"<CollaborationEvent {self.event_type} by user {self.user_id} on {self.resource_type}:{self.resource_id}>"
+
+
+class MessageQueue(Base):
+    """Persistent message queue for guaranteed delivery."""
+    
+    __tablename__ = "message_queue"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Message identification
+    message_id = Column(String(100), unique=True, nullable=False, index=True)
+    
+    # Recipient
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    session_id = Column(String(100), index=True)  # Specific session or null for all user's sessions
+    
+    # Message details
+    event_type = Column(String(50), nullable=False, index=True)
+    event_data = Column(JSON, nullable=False)
+    
+    # Delivery tracking
+    status = Column(String(20), nullable=False, default="pending", index=True)  # pending, delivered, failed, expired
+    attempts = Column(Integer, default=0)
+    max_attempts = Column(Integer, default=3)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    delivered_at = Column(DateTime(timezone=True))
+    expires_at = Column(DateTime(timezone=True))  # TTL for message
+    next_retry_at = Column(DateTime(timezone=True))
+    
+    # Error tracking
+    last_error = Column(Text)
+    
+    def __repr__(self) -> str:
+        return f"<MessageQueue {self.message_id}: {self.event_type} for user {self.user_id}, status={self.status}>"
