@@ -113,6 +113,10 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     enable_tracing: bool = True
     tracing_endpoint: str = "http://localhost:4318"
+    enable_opentelemetry: bool = True
+    otel_exporter_endpoint: str = "http://localhost:4317"
+    enable_sentry: bool = False
+    sentry_dsn: str = ""
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["json", "text"] = "json"
 

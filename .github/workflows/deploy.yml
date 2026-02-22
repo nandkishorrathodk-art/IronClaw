@@ -1,0 +1,88 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://api.ironclaw.example.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+      
+      - name: Update Kubernetes secrets
+        run: |
+          kubectl create secret generic ironclaw-secrets \
+            --from-literal=SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            --from-literal=JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --from-literal=ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
+            --from-literal=GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
+            --from-literal=GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+            --from-literal=SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+            --namespace=ironclaw \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/ --namespace=ironclaw
+      
+      - name: Wait for deployment
+        run: |
+          kubectl rollout status deployment/ironclaw-api --namespace=ironclaw --timeout=5m
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods --namespace=ironclaw
+          kubectl get svc --namespace=ironclaw
+          kubectl get ingress --namespace=ironclaw
+      
+      - name: Run smoke tests
+        run: |
+          ENDPOINT="${{ secrets.API_ENDPOINT }}"
+          
+          # Health check
+          curl -f "${ENDPOINT}/health" || exit 1
+          
+          # Readiness check
+          curl -f "${ENDPOINT}/health/ready" || exit 1
+          
+          echo "✅ Deployment successful!"
+      
+      - name: Notify deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Deployment to ${{ github.event.inputs.environment || "production" }} ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

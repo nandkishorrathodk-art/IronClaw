@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ironclaw-config
+  namespace: ironclaw
+data:
+  ENVIRONMENT: "production"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_WORKERS: "4"
+  ENABLE_PROMETHEUS: "true"
+  ENABLE_OPENTELEMETRY: "true"
+  ENABLE_CORS: "true"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  MAX_MEMORY_MB: "8192"
+  ENABLE_MEMORY_MONITORING: "true"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "ironclaw_db"
+  POSTGRES_USER: "ironclaw"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  QDRANT_HOST: "qdrant"
+  QDRANT_PORT: "6333"
+  OTEL_EXPORTER_ENDPOINT: "http://jaeger:4317"

@@ -24,6 +24,8 @@ from src.utils.metrics import (
     http_requests_in_progress,
     update_system_metrics,
 )
+from src.utils.tracing import setup_tracing
+from src.utils.error_tracking import setup_sentry, capture_exception
 from src.database.connection import init_database, close_database, check_database_health
 from src.database.redis_client import init_redis, close_redis, check_redis_health
 from src.plugins.registry import PluginRegistry
@@ -49,6 +51,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Available AI providers: {settings.available_ai_providers}")
+    
+    # Set up error tracking
+    setup_sentry()
+    
+    # Set up distributed tracing
+    setup_tracing(app)
     
     # Initialize database connection
     await init_database()
@@ -83,6 +91,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         logger.info("Starting system metrics monitoring...")
         metrics_task = asyncio.create_task(update_system_metrics())
     
+    # Start WebSocket and message queue services
+    logger.info("Starting WebSocket services...")
+    from src.realtime.manager import connection_manager
+    from src.realtime.message_queue import message_queue_service
+    
+    await connection_manager.start_background_tasks()
+    await message_queue_service.start_delivery_worker()
+    logger.info("WebSocket services started")
+    
     logger.info("✅ Ironclaw startup complete!")
     
     yield
@@ -96,6 +113,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             await metrics_task
         except asyncio.CancelledError:
             pass
+    
+    # Stop WebSocket services
+    logger.info("Stopping WebSocket services...")
+    from src.realtime.manager import connection_manager
+    from src.realtime.message_queue import message_queue_service
+    
+    await connection_manager.stop_background_tasks()
+    await message_queue_service.stop_delivery_worker()
+    logger.info("WebSocket services stopped")
     
     # Cleanup plugin system
     if settings.enable_plugins:
@@ -196,6 +222,10 @@ async def metrics_middleware(request: Request, call_next):
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    
+    # Capture exception in Sentry
+    capture_exception(exc)
+    
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
