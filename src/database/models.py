@@ -294,3 +294,144 @@ class ConversationMemory(Base):
     
     def __repr__(self) -> str:
         return f"<ConversationMemory {self.id}: {self.content[:50]}...>"
+
+
+class Feedback(Base):
+    """User feedback for learning and self-improvement."""
+    
+    __tablename__ = "feedback"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True, index=True)
+    
+    # Feedback details
+    feedback_type = Column(String(20), nullable=False)  # thumbs_up, thumbs_down, rating_1-5
+    rating = Column(Integer)  # 1-5 for rating feedback
+    comment = Column(Text)  # Optional user comment
+    
+    # Context when feedback was given
+    model_used = Column(String(100))
+    task_type = Column(String(50))
+    response_length = Column(Integer)  # Length of response in characters
+    
+    # Additional metadata
+    metadata = Column(JSON)  # Store tone, style, etc.
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    def __repr__(self) -> str:
+        return f"<Feedback {self.id}: {self.feedback_type} by user {self.user_id}>"
+
+
+class PerformanceMetric(Base):
+    """System performance metrics for self-improvement."""
+    
+    __tablename__ = "performance_metrics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Metric identification
+    metric_name = Column(String(100), nullable=False, index=True)
+    metric_type = Column(String(50), nullable=False)  # response_time, error_rate, memory_usage, etc.
+    endpoint = Column(String(255))  # API endpoint if applicable
+    
+    # Metric values
+    value = Column(Float, nullable=False)
+    unit = Column(String(20))  # ms, bytes, percent, count
+    
+    # Aggregation period
+    period_start = Column(DateTime(timezone=True), nullable=False, index=True)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    sample_count = Column(Integer, default=1)  # Number of samples aggregated
+    
+    # Statistical details
+    min_value = Column(Float)
+    max_value = Column(Float)
+    avg_value = Column(Float)
+    p50_value = Column(Float)
+    p95_value = Column(Float)
+    p99_value = Column(Float)
+    
+    # Additional context
+    metadata = Column(JSON)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    def __repr__(self) -> str:
+        return f"<PerformanceMetric {self.metric_name}: {self.value} {self.unit}>"
+
+
+class CodeImprovement(Base):
+    """Track AI-generated code improvements."""
+    
+    __tablename__ = "code_improvements"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Improvement identification
+    file_path = Column(String(500), nullable=False, index=True)
+    improvement_type = Column(String(50), nullable=False)  # optimization, bug_fix, refactor
+    
+    # Analysis
+    issue_description = Column(Text, nullable=False)
+    performance_impact = Column(String(50))  # high, medium, low
+    confidence_score = Column(Float)  # 0-1, AI's confidence in the improvement
+    
+    # Code changes
+    original_code = Column(Text)
+    improved_code = Column(Text)
+    diff = Column(Text)  # Git-style diff
+    
+    # Testing results
+    test_status = Column(String(20))  # pending, passed, failed
+    test_results = Column(JSON)
+    
+    # Deployment
+    applied = Column(Boolean, default=False)
+    applied_at = Column(DateTime(timezone=True))
+    rolled_back = Column(Boolean, default=False)
+    rollback_reason = Column(Text)
+    
+    # Git integration
+    commit_hash = Column(String(40))
+    branch_name = Column(String(255))
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    def __repr__(self) -> str:
+        return f"<CodeImprovement {self.file_path}: {self.improvement_type}>"
+
+
+class LearningEvent(Base):
+    """Track learning events for analytics and debugging."""
+    
+    __tablename__ = "learning_events"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    
+    # Event details
+    event_type = Column(String(50), nullable=False, index=True)  # preference_update, pattern_learned, improvement_applied
+    event_category = Column(String(50))  # learning, performance, code_quality
+    
+    # Event data
+    description = Column(Text)
+    before_state = Column(JSON)  # State before the learning event
+    after_state = Column(JSON)  # State after the learning event
+    impact_score = Column(Float)  # Quantified impact (0-1)
+    
+    # Related entities
+    related_feedback_id = Column(Integer, ForeignKey("feedback.id"), nullable=True)
+    related_improvement_id = Column(Integer, ForeignKey("code_improvements.id"), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    def __repr__(self) -> str:
+        return f"<LearningEvent {self.event_type}: {self.description[:50]}>"

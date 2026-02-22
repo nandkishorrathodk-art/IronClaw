@@ -106,6 +106,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             await plugins.plugin_registry.cleanup_all()
         logger.info("Plugin system cleaned up")
     
+    # Cleanup voice engines
+    from src.api.v1 import voice
+    await voice.cleanup_voice_engines()
+    
     # Close database connections
     await close_database()
     
