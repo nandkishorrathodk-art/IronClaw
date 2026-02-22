@@ -286,6 +286,7 @@
 ---
 
 ### [ ] Phase 4: Vision System with Intel NPU Acceleration
+<!-- chat-id: a7ff0144-93b0-4802-9b9f-e11e43a25ace -->
 **Duration**: Week 4-5  
 **Goal**: Real-time screen capture, OCR, object detection
 
