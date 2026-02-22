@@ -723,6 +723,7 @@
 ---
 
 ### [ ] Phase 9: Real-Time & Collaboration
+<!-- chat-id: 9eb81d87-01e5-4213-bf12-2ce7f1fb6e1f -->
 **Duration**: Week 9-10  
 **Goal**: WebSocket-first, streaming, multi-user
 
