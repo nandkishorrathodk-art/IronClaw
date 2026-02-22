@@ -377,6 +377,7 @@
 ---
 
 ### [ ] Phase 5: Execution Engine & Safe Automation
+<!-- chat-id: ca3f044b-8e29-4d70-8e3a-7548e615e8cb -->
 **Duration**: Week 5-6  
 **Goal**: Workflow orchestration, sandboxed execution, desktop control
 
