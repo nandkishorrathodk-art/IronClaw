@@ -26,6 +26,9 @@ from src.utils.metrics import (
 )
 from src.database.connection import init_database, close_database, check_database_health
 from src.database.redis_client import init_redis, close_redis, check_redis_health
+from src.plugins.registry import PluginRegistry
+from src.plugins.sandbox import PluginSandbox
+from src.plugins.hot_reload import PluginHotReloadManager
 
 # Initialize logging
 setup_logging()
@@ -53,6 +56,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     # Initialize Redis connection
     await init_redis()
     
+    # Initialize plugin system
+    if settings.enable_plugins:
+        logger.info("Initializing plugin system...")
+        from src.api.v1 import plugins
+        
+        # Create plugin registry and sandbox
+        plugins.plugin_registry = PluginRegistry(plugins_dir="plugins")
+        plugins.plugin_sandbox = PluginSandbox()
+        plugins.hot_reload_manager = PluginHotReloadManager(
+            registry=plugins.plugin_registry,
+            plugins_dir="plugins",
+        )
+        
+        # Discover and load plugins
+        discovered = await plugins.plugin_registry.discover_plugins()
+        logger.info(f"Discovered {len(discovered)} plugins: {discovered}")
+        
+        # Start hot reload watcher
+        plugins.hot_reload_manager.start_watching()
+        logger.info("Plugin hot reload enabled")
+    
     # Start background tasks
     metrics_task = None
     if settings.enable_prometheus:
@@ -72,6 +96,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             await metrics_task
         except asyncio.CancelledError:
             pass
+    
+    # Cleanup plugin system
+    if settings.enable_plugins:
+        from src.api.v1 import plugins
+        if plugins.hot_reload_manager:
+            plugins.hot_reload_manager.stop_watching()
+        if plugins.plugin_registry:
+            await plugins.plugin_registry.cleanup_all()
+        logger.info("Plugin system cleaned up")
     
     # Close database connections
     await close_database()

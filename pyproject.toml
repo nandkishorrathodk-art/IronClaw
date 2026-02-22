@@ -62,6 +62,11 @@ dependencies = [
     "pyjwt>=2.9.0,<3.0.0",
     "passlib[bcrypt]>=1.7.4,<2.0.0",
     "python-jose>=3.3.0,<4.0.0",
+    
+    # Plugin System
+    "psutil>=6.1.0,<7.0.0",
+    "watchdog>=5.0.0,<6.0.0",
+    "duckduckgo-search>=6.3.0,<7.0.0",
 ]
 
 [project.optional-dependencies]
